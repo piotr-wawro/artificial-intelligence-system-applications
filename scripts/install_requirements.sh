@@ -8,8 +8,10 @@ fi
 
 if [[ "$1" == "linux" ]]
     then
+    pip install -r ./requirements/linux/pypi.txt
 elif [[ "$1" == "windows" ]]
     then
+    pip install -r ./requirements/windows/pypi.txt
 else
     echo "Cannot install system specific requirements. Unknown operating system."
     exit 1
