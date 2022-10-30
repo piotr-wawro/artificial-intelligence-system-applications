@@ -3,5 +3,5 @@ matplotlib
 numpy
 pandas
 seaborn
-statsmodels
 sklearn
+fitter
