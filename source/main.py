@@ -12,6 +12,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import IsolationForest
 
 from source.KNN import KNN, euclidean_distance
+from source.PNN import PNN
 from source.metrics import plot_confusion_matrix, print_summary
 from source.plot import plot_pairplot, plot_correlation, plot_pca
 
@@ -104,7 +105,7 @@ pure.loc[selected_rows].iloc[:, 1]
 # PCA
 
 # %%
-pca = sklearnPCA()
+# pca = PCA()
 
 
 
@@ -119,16 +120,37 @@ pca = sklearnPCA()
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
 
 # %%
-pred_y = KNN(x_train, y_train, 6, x_test ,euclidean_distance)
-plot_confusion_matrix(y_test, pred_y)
-print_summary(y_test, pred_y)
+y_pred = KNN(x_train, y_train, 6, x_test ,euclidean_distance)
+plot_confusion_matrix(y_test, y_pred)
+print_summary(y_test, y_pred)
 
 # %%
 KNN_keras = KNeighborsClassifier(n_neighbors=6)
 KNN_keras.fit(x_train, y_train)
-pred_y = KNN_keras.predict(x_test)
+y_pred = KNN_keras.predict(x_test)
 
-plot_confusion_matrix(y_test, pred_y)
-print_summary(y_test, pred_y)
+plot_confusion_matrix(y_test, y_pred)
+print_summary(y_test, y_pred)
 
+# //////////////////////////////////////////////////////////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
+
+# %% [markdown]
+# Classification using PNN
+
+# %%
+import source.PNN
+importlib.reload(source.PNN)
+from source.PNN import PNN
+
+pnn = PNN()
+pnn.fit(x_train, y_train)
+y_pred = pnn.predict(x_test)
+
+plot_confusion_matrix(y_test, y_pred)
+print_summary(y_test, y_pred)
+
+# %%
+print(len(y_test))
 # %%
