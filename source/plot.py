@@ -40,8 +40,10 @@ def plot_correlation(x, y, model=True):
       plt.figure()
 
 def plot_pca(x):
+  x_normalized = (x - x.mean()) / x.std()
+
   pca = PCA()
-  pca.fit(x)
+  pca.fit(x_normalized)
 
   total_sum = np.cumsum(pca.explained_variance_ratio_)
 

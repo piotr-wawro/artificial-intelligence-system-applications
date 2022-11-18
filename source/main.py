@@ -7,9 +7,13 @@ from matplotlib.cbook import boxplot_stats
 import numpy as np
 import pandas as pd
 import seaborn as sns
+
+from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import IsolationForest
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.decomposition import PCA
 
 from source.KNN import KNN, euclidean_distance
 from source.PNN import PNN
@@ -78,8 +82,6 @@ plt.show()
 
 # %% [markdown]
 # Removing outliers
-# Kiedy usuwać wartości odstające z Score?
-# Kiedy rozdzielać dane?
 
 # %%
 clf = IsolationForest(n_estimators=round(y.size/10))
@@ -105,9 +107,27 @@ pure.loc[selected_rows].iloc[:, 1]
 # PCA
 
 # %%
-# pca = PCA()
+explained_variance = 0.95
+
+# normalizer = preprocessing.Normalizer().fit(x)
+# x_normalized = normalizer.transform(x)
+
+# normalizer = preprocessing.StandardScaler().fit(x)
+# x_normalized = normalizer.transform(x)
+
+x_normalized = (x - x.mean()) / x.std()
+
+pca = PCA()
+pca.fit(x_normalized)
+
+total_sum = np.cumsum(pca.explained_variance_ratio_)
+coponents = np.argmax(total_sum >= explained_variance) + 1
 
 
+pca = PCA(n_components=coponents)
+principalComponents = pca.fit_transform(x_normalized)
+
+x = pd.DataFrame(data = principalComponents, columns=[f"PCA{i}" for i in range(coponents)])
 
 # //////////////////////////////////////////////////////////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
@@ -140,10 +160,6 @@ print_summary(y_test, y_pred)
 # Classification using PNN
 
 # %%
-import source.PNN
-importlib.reload(source.PNN)
-from source.PNN import PNN
-
 pnn = PNN()
 pnn.fit(x_train, y_train)
 y_pred = pnn.predict(x_test)
@@ -151,6 +167,19 @@ y_pred = pnn.predict(x_test)
 plot_confusion_matrix(y_test, y_pred)
 print_summary(y_test, y_pred)
 
+# //////////////////////////////////////////////////////////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
+
+# %% [markdown]
+# Classification decision tree
+
 # %%
-print(len(y_test))
-# %%
+tree = DecisionTreeClassifier()
+tree.fit(x_train, y_train)
+y_pred = tree.predict(x_test)
+
+plot_confusion_matrix(y_test, y_pred)
+print_summary(y_test, y_pred)
+
+plot_tree(tree)
