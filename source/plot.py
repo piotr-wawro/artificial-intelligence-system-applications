@@ -22,10 +22,16 @@ def lower(x1, x2, **kwargs):
   sns.scatterplot(data=df, x=x1.name, y=x2.name, hue=y.name)
 
 def plot_pairplot(x, y):
-  grid = sns.PairGrid(x)
-  grid.map_upper(upper, y=y)
-  grid.map_diag(diag, y=y)
-  grid.map_lower(lower, y=y)
+  xp = pd.DataFrame()
+  yp = pd.Series(name=y.name, dtype='object')
+  for value in y.unique():
+    xp = pd.concat([xp, x[y == value].iloc[:100, :]], axis=0)
+    yp = pd.concat([yp, y[y == value].iloc[:100]], axis=0)
+
+  grid = sns.PairGrid(xp)
+  grid.map_upper(upper, y=yp)
+  grid.map_diag(diag, y=yp)
+  grid.map_lower(lower, y=yp)
 
 def plot_correlation(x, y, model=True):
   df = pd.concat([x, y], axis=1)
@@ -40,10 +46,8 @@ def plot_correlation(x, y, model=True):
       plt.figure()
 
 def plot_pca(x):
-  x_normalized = (x - x.mean()) / x.std()
-
   pca = PCA()
-  pca.fit(x_normalized)
+  pca.fit(x)
 
   total_sum = np.cumsum(pca.explained_variance_ratio_)
 

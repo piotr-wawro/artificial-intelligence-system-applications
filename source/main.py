@@ -31,23 +31,29 @@ pd.options.mode.chained_assignment = None
 # Data read
 
 # %%
-pure = pd.read_csv(Path('./source/data/happiness/2019.csv'))
-
-x = pure.iloc[:, 3:]
-y = pure.iloc[:, 2]
-name = pure.iloc[:, 1].name
+pure = pd.read_csv(Path('./source/data/water_potability.csv'))
+pure.dropna(inplace=True)
+pure.reset_index(inplace=True, drop=True)
 
 # %%
-q1 = y.quantile(0.25)
-q3 = y.quantile(0.75)
+x = pure.iloc[:, :-1]
+y = pure.iloc[:, -1]
+name = pure.iloc[:, 0].name
 
-select_low = y <= q1
-select_mid = (y > q1) & (y <= q3)
-select_high = y > q3
+# %%
+# normalizer = preprocessing.Normalizer().fit(x)
+# x = pd.DataFrame(normalizer.transform(x), columns=x.columns)
 
-y[select_low] = 'low'
-y[select_mid] = 'mid'
-y[select_high] = 'high'
+# normalizer = preprocessing.StandardScaler().fit(x)
+# x = pd.DataFrame(normalizer.transform(x), columns=x.columns)
+
+# %%
+for col in x:
+  if x[col].dtype == 'object':
+    m = {old_v: new_v for new_v, old_v in enumerate(x[col].unique())}
+    x[col] = x[col].map(m)
+
+y = y.map({0: 'f', 1: 't'})
 
 # //////////////////////////////////////////////////////////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
@@ -91,8 +97,12 @@ mask = [True if x == -1 else False for x in pred]
 to_remove = pure.loc[mask, name]
 
 print(to_remove)
+print(len(to_remove))
 x.drop(to_remove.index, inplace=True)
 y.drop(to_remove.index, inplace=True)
+
+x.reset_index(inplace=True, drop=True)
+y.reset_index(inplace=True, drop=True)
 
 # %%
 outliers = boxplot_stats(pure.iloc[:, [8]].values)[0]['fliers']
@@ -110,15 +120,13 @@ pure.loc[selected_rows].iloc[:, 1]
 explained_variance = 0.95
 
 # normalizer = preprocessing.Normalizer().fit(x)
-# x_normalized = normalizer.transform(x)
+# x = normalizer.transform(x)
 
 # normalizer = preprocessing.StandardScaler().fit(x)
-# x_normalized = normalizer.transform(x)
-
-x_normalized = (x - x.mean()) / x.std()
+# x = normalizer.transform(x)
 
 pca = PCA()
-pca.fit(x_normalized)
+pca.fit(x)
 
 total_sum = np.cumsum(pca.explained_variance_ratio_)
 coponents = np.argmax(total_sum >= explained_variance) + 1
