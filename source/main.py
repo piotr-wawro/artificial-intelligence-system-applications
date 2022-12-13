@@ -41,13 +41,6 @@ y = pure.iloc[:, -1]
 name = pure.iloc[:, 0].name
 
 # %%
-# normalizer = preprocessing.Normalizer().fit(x)
-# x = pd.DataFrame(normalizer.transform(x), columns=x.columns)
-
-# normalizer = preprocessing.StandardScaler().fit(x)
-# x = pd.DataFrame(normalizer.transform(x), columns=x.columns)
-
-# %%
 for col in x:
   if x[col].dtype == 'object':
     m = {old_v: new_v for new_v, old_v in enumerate(x[col].unique())}
@@ -94,20 +87,46 @@ clf = IsolationForest(n_estimators=round(y.size/10))
 pred = clf.fit_predict(x)
 
 mask = [True if x == -1 else False for x in pred]
-to_remove = pure.loc[mask, name]
+to_remove = x.loc[mask, name]
 
 print(to_remove)
-print(len(to_remove))
+
 x.drop(to_remove.index, inplace=True)
 y.drop(to_remove.index, inplace=True)
-
 x.reset_index(inplace=True, drop=True)
 y.reset_index(inplace=True, drop=True)
 
 # %%
-outliers = boxplot_stats(pure.iloc[:, [8]].values)[0]['fliers']
-selected_rows = pure.iloc[:, 8].isin(outliers)
-pure.loc[selected_rows].iloc[:, 1]
+removed_elements = pd.Series(dtype='float')
+
+for col in x:
+  outliers = boxplot_stats(x.loc[:, col])[0]['fliers']
+  mask = x.loc[:, col].isin(outliers)
+  to_remove = x.loc[mask, name]
+  
+  removed_elements = pd.concat([to_remove, removed_elements], axis=0)
+
+  x.drop(to_remove.index, inplace=True)
+  y.drop(to_remove.index, inplace=True)
+  x.reset_index(inplace=True, drop=True)
+  y.reset_index(inplace=True, drop=True)
+
+print(removed_elements)
+
+# //////////////////////////////////////////////////////////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
+# //////////////////////////////////////////////////////////////////////////////
+
+# %% [markdown]
+# Normalizers
+
+# %%
+normalizer = preprocessing.MinMaxScaler().fit(x)
+x = pd.DataFrame(normalizer.transform(x), columns=x.columns)
+
+# %%
+normalizer = preprocessing.StandardScaler().fit(x)
+x = pd.DataFrame(normalizer.transform(x), columns=x.columns)
 
 # //////////////////////////////////////////////////////////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
@@ -119,12 +138,6 @@ pure.loc[selected_rows].iloc[:, 1]
 # %%
 explained_variance = 0.95
 
-# normalizer = preprocessing.Normalizer().fit(x)
-# x = normalizer.transform(x)
-
-# normalizer = preprocessing.StandardScaler().fit(x)
-# x = normalizer.transform(x)
-
 pca = PCA()
 pca.fit(x)
 
@@ -133,7 +146,7 @@ coponents = np.argmax(total_sum >= explained_variance) + 1
 
 
 pca = PCA(n_components=coponents)
-principalComponents = pca.fit_transform(x_normalized)
+principalComponents = pca.fit_transform(x)
 
 x = pd.DataFrame(data = principalComponents, columns=[f"PCA{i}" for i in range(coponents)])
 
@@ -185,9 +198,18 @@ print_summary(y_test, y_pred)
 # %%
 tree = DecisionTreeClassifier()
 tree.fit(x_train, y_train)
-y_pred = tree.predict(x_test)
 
-plot_confusion_matrix(y_test, y_pred)
-print_summary(y_test, y_pred)
+y_pred_train = tree.predict(x_train)
+# y_pred_test = tree.predict(x_test)
 
-plot_tree(tree)
+plot_confusion_matrix(x_train, y_pred_train)
+# print_summary(x_train, y_pred_train)
+
+# plot_confusion_matrix(y_test, y_pred_test)
+# print_summary(y_test, y_pred_test)
+
+# plot_tree(tree)
+
+# %%
+y_train
+# %%
