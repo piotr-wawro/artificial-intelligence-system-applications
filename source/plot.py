@@ -54,3 +54,33 @@ def plot_pca(x):
   plt.plot(total_sum)
   plt.xlabel('number of components')
   plt.ylabel('cumulative explained variance')
+
+def plot_importance(columns, importance, error=None):
+  df = pd.DataFrame(data={
+    'Attribute': columns,
+    'Importance': importance
+  })
+  df = df.sort_values(by='Importance', ascending=False)
+
+  sns.barplot(
+    data=df,
+    x="Attribute",
+    y="Importance",
+    color="#3274A1"
+  )
+
+  if error is not None:
+    plt.errorbar(x=range(len(columns)), y=df["Importance"], yerr=error, fmt="none", c= "k")
+
+  plt.xticks(rotation=30, horizontalalignment='right')
+  plt.show()
+
+def plot_kde(x, y):
+  for name in x:
+    sns.kdeplot(data=pd.concat([x, y], axis=1), x=name, hue=y.name)
+    plt.show()
+
+def plot_histrogram(x, y):
+  for name in x:
+    sns.histplot(data=pd.concat([x, y], axis=1), x=name, hue=y.name, kde=True, stat="probability")
+    plt.show()

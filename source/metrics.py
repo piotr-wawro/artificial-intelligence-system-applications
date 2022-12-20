@@ -22,6 +22,7 @@ def plot_confusion_matrix(y_true, y_pred):
               xticklabels=np.unique(y_pred), yticklabels=np.unique(y_pred))
   plt.ylabel('True label')
   plt.xlabel('Predicted label')
+  plt.show()
 
 def print_summary(y_true, y_pred):
   summary = pd.concat([
