@@ -366,7 +366,6 @@ jump_high = trapezeL(0.3, .6)
 y_pred_train = []
 
 for i, sample in x_train.iterrows():
-  # m = sNorm(tall(sample.height_cm), sNorm(heavy(sample.weight_kg), sNorm(strong(sample.gripForce), jump_low(sample.broad_jump_cm))))
   m = tall(sample.height_cm) + heavy(sample.weight_kg) + strong(sample.gripForce) + jump_low(sample.broad_jump_cm)
   f = short(sample.height_cm) + light(sample.weight_kg) + weak(sample.gripForce) + jump_high(sample.broad_jump_cm)
 
@@ -378,4 +377,66 @@ for i, sample in x_train.iterrows():
 plot_confusion_matrix(y_train, y_pred_train)
 print_summary(y_train, y_pred_train)
 
+# %% [markdown]
+# Rules
+# short AND weak AND jump_low => F
+# short AND weak AND jump_high => F
+# short AND strong AND jump_low => F
+# short AND strong AND jump_high => M
+# tall AND weak AND jump_low => F
+# tall AND weak AND jump_high => M
+# tall AND strong AND jump_low => M
+# tall AND strong AND jump_high => M
+
+# %%
+y_pred_train = []
+
+for i, sample in x_train.iterrows():
+  f = sNorm([
+    tNorm([short(sample.height_cm), weak(sample.gripForce), jump_low(sample.broad_jump_cm)]),
+    tNorm([short(sample.height_cm), weak(sample.gripForce), jump_high(sample.broad_jump_cm)]),
+    tNorm([short(sample.height_cm), strong(sample.gripForce), jump_low(sample.broad_jump_cm)]),
+    tNorm([tall(sample.height_cm), weak(sample.gripForce), jump_low(sample.broad_jump_cm)]),
+  ])
+
+  m = sNorm([
+    tNorm([short(sample.height_cm), strong(sample.gripForce), jump_high(sample.broad_jump_cm)]),
+    tNorm([tall(sample.height_cm), weak(sample.gripForce), jump_high(sample.broad_jump_cm)]),
+    tNorm([tall(sample.height_cm), strong(sample.gripForce), jump_low(sample.broad_jump_cm)]),
+    tNorm([tall(sample.height_cm), strong(sample.gripForce), jump_high(sample.broad_jump_cm)]),
+  ])
+
+  if m > f:
+    y_pred_train.append("M")
+  else:
+    y_pred_train.append("F")
+
+plot_confusion_matrix(y_train, y_pred_train)
+print_summary(y_train, y_pred_train)
+
+# %%
+y_pred_test = []
+
+for i, sample in x_test.iterrows():
+  f = sNorm([
+    tNorm([short(sample.height_cm), weak(sample.gripForce), jump_low(sample.broad_jump_cm)]),
+    tNorm([short(sample.height_cm), weak(sample.gripForce), jump_high(sample.broad_jump_cm)]),
+    tNorm([short(sample.height_cm), strong(sample.gripForce), jump_low(sample.broad_jump_cm)]),
+    tNorm([tall(sample.height_cm), weak(sample.gripForce), jump_low(sample.broad_jump_cm)]),
+  ])
+
+  m = sNorm([
+    tNorm([short(sample.height_cm), strong(sample.gripForce), jump_high(sample.broad_jump_cm)]),
+    tNorm([tall(sample.height_cm), weak(sample.gripForce), jump_high(sample.broad_jump_cm)]),
+    tNorm([tall(sample.height_cm), strong(sample.gripForce), jump_low(sample.broad_jump_cm)]),
+    tNorm([tall(sample.height_cm), strong(sample.gripForce), jump_high(sample.broad_jump_cm)]),
+  ])
+
+  if m > f:
+    y_pred_test.append("M")
+  else:
+    y_pred_test.append("F")
+
+plot_confusion_matrix(y_test, y_pred_test)
+print_summary(y_test, y_pred_test)
 # %%

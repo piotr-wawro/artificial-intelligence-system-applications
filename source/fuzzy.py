@@ -1,8 +1,10 @@
-def sNorm(a: float, b:float):
-  return max(0, a+b-1)
+import functools
 
-def tNorm(a: float, b: float):
-  return min(1, a+b)
+def sNorm(values: list[float]):
+  return functools.reduce(lambda a, b: max(a, b), values)
+
+def tNorm(values: list[float]):
+  return functools.reduce(lambda a, b: a*b, values)
 
 def triangle(a, t, b):
   def f(x: float):
