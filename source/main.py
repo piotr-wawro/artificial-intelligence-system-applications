@@ -1,5 +1,4 @@
 # %%
-import importlib
 from pathlib import Path
 from math import sqrt
 
@@ -28,28 +27,31 @@ from source.fuzzy import trapezeL, trapezeR, triangle, tNorm, sNorm
 pd.options.display.float_format = '{:.3f}'.format
 pd.options.mode.chained_assignment = None
 
-# //////////////////////////////////////////////////////////////////////////////
-# //////////////////////////////////////////////////////////////////////////////
-# //////////////////////////////////////////////////////////////////////////////
+# /////////////////////////////////////////////////////////////////////////////
+# /////////////////////////////////////////////////////////////////////////////
+# /////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# Data read
-
-# %%
-pure = pd.read_csv(Path('./source/data/water_potability.csv'))
-pure.dropna(inplace=True)
-pure.reset_index(inplace=True, drop=True)
-
-x = pure.iloc[:, :-1]
-y = pure.iloc[:, -1]
-name = pure.iloc[:, 0].name
-
-for col in x:
-  if x[col].dtype == 'object':
-    m = {old_v: new_v for new_v, old_v in enumerate(x[col].unique())}
-    x[col] = x[col].map(m)
-
-y = y.map({0: 'f', 1: 't'})
+# #### Wczytywanie danych
+# 
+# W pracy został wykorzystany zbiór danych dotyczący sprawności fizycznej.
+# Znajduje się w domenie publicznej i jest dostępny na [kaggle.com][1]
+# 
+# W zbiorze znajduje się ponad 13 tys. rekordów. Każda próbka ma dwanaście cech.
+# * age (wiek)
+# * gender (płeć)
+# * height_cm (wzrost)
+# * weight_kg (waga)
+# * body fat_% (procent tkanki tłuszczowej)
+# * diastolic (rozkurczowe ciśnienie krwi)
+# * systolic (skurczowe ciśnienie krwi)
+# * gripForce (siła chwytu)
+# * sit and bend forward_cm (skłon do przodu w pozycji siedzącej)
+# * sit-ups counts (ilość przysiadów)
+# * broad jump_cm (skok w dal)
+# * class (klasa)
+# 
+# [1]: https://www.kaggle.com/datasets/kukuroo3/body-performance-data
 
 # %%
 pure = pd.read_csv(Path('./source/data/bodyPerformance.csv'))
@@ -68,41 +70,64 @@ for col in x:
 x.columns = [name.replace(' ', '_') for name in x.columns]
 y.name = y.name.replace(' ', '_')
 
-# %%
-pure = pd.read_csv(Path('./source/data/exams.csv'))
-pure.dropna(inplace=True)
-pure.reset_index(inplace=True, drop=True)
-
-x = pure.iloc[:, pure.columns != "gender"]
-y = pure.loc[:, "gender"]
-name = pure.iloc[:, 0].name
-
-for col in x:
-  if x[col].dtype == 'object':
-    m = {old_v: new_v for new_v, old_v in enumerate(x[col].unique())}
-    x[col] = x[col].map(m)
-
-# //////////////////////////////////////////////////////////////////////////////
-# //////////////////////////////////////////////////////////////////////////////
-# //////////////////////////////////////////////////////////////////////////////
+# /////////////////////////////////////////////////////////////////////////////
+# /////////////////////////////////////////////////////////////////////////////
+# /////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# I Data visualization
+# #### Wizualizacja danych
+
+# %% [markdown]
+# plot_pairplot pozwala na wizualizację pomiędzy parami cech z podziałem ze
+# względu na płeć(niebieski - mężczyzna, pomarańczowy - kobieta). Na przekątnej
+# znajdują się wykresy skrzypcowe dla każdej cechy. Górnotrójkątna część
+# przedstawia wykres punktowy z regresją liniową, a dolnotrójkątna wykres
+# punktowy z estymatorem jądrowym gęstości.
 
 # %%
 plot_pairplot(x, y)
 
+# %% [markdown]
+# plot_correlation zwraca współczynniki korelacji Pearsona oznaczające poziom
+# zależności liniowej między zmiennymi. 1 oznacza dodatnią liniową zależność,
+# -1 ujemną liniową zależność, a 0 brak liniowej zależność.
+
 # %%
 plot_correlation(x, y)
+
+# %% [markdown]
+# Aby zmniejszyć ilość cech możemy użyć analizy głównych składowych. plot_pca
+# rysuje wykres przedstawiający procent wyjaśnionej wariancji względem ilości
+# komponentów.
 
 # %%
 plot_pca(x)
 
-# %%
-plot_kde(x, y)
+# %% [markdown]
+# Histogram pokazuje nam, ile obserwacji przypada na określony przedział
+# wartości.
 
 # %%
 plot_histrogram(x, y)
+
+# %% [markdown]
+# Estymator jądrowy gęstości (ang. kernel density estimate, kde) to metoda
+# wizualizacji rozkładu obserwacji w zbiorze danych, analogiczna do histogramu.
+
+# %%
+plot_kde(x, y)
+
+# %% [markdown]
+# Wykres pudełkowy przedstawia położenie, rozproszenie i kształt rozkładu
+# empirycznego badanej cechy.
+
+# %%
+ax = sns.boxplot(data=x)
+plt.xticks(rotation=30, horizontalalignment='right')
+plt.show()
+
+# %% [markdown]
+# Wykres pudełkowy ale z podziałem ze względu na płeć.
 
 # %%
 df = pd.melt(pd.concat([x, y], axis=1), id_vars=[y.name])
@@ -110,17 +135,22 @@ ax = sns.boxplot(data=df, x='variable', y='value', hue=y.name)
 plt.xticks(rotation=30, horizontalalignment='right')
 plt.show()
 
-# %%
-ax = sns.boxplot(data=x)
-plt.xticks(rotation=30, horizontalalignment='right')
-plt.show()
-
 # //////////////////////////////////////////////////////////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# Removing outliers
+# #### Usuwanie wartości odstających
+# 
+# Obserwacje odstające są odległe od pozostałych elementów próby. Mogą być wynikiem
+# błędnego pomiaru lub odzwierciedlać rzeczywisty przypadek, ale taki, który jest
+# mało prawdopodobny. Takie obserwacje chcemy usuwać bo mogą negatywnie wpływać
+# na jakość modelu. Poniżej znajdują się dwa algorytmy, którymi możemy je usunąć.
+# 
+# Drugi algorytm wykorzystuje odchylenie standardowe. Jeżeli obserwacja znajduje się
+# poza przedziałem [Q1 - 1.5 * IQR, Q3 + 1.5 * IQR], gdzie Q1 i Q3 to odpowiednio
+# pierwszy i trzeci kwartyl, a IQR to rozstęp kwartylny, to taką obserwację zaliczamy
+# jako odstającą.
 
 # %%
 clf = IsolationForest(n_estimators=round(y.size/10))
@@ -158,7 +188,13 @@ print(removed_elements)
 # //////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# Normalizers
+# #### Normalizacja i standaryzacja
+# 
+# Niektóre algorytmy wymagają, aby dane zostały podjęte normalizacji lub
+# standaryzacji. Normalizacja polega na przeskalowaniu danych zazwyczaj
+# do wartości od 0 do 1. Standaryzacja przekształca rozkład do
+# standardowego rozkładu normalnego czyli o wartości średniej 0 oraz odchyleniu
+# standardowym 1.
 
 # %%
 normalizer = preprocessing.MinMaxScaler().fit(x)
@@ -173,7 +209,13 @@ x = pd.DataFrame(normalizer.transform(x), columns=x.columns)
 # //////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# PCA
+# #### Analizy głównych składowych
+# 
+# Za pomocą analizy głównych składowych jesteśmy w stanie przekształcić układ
+# współrzędnych w taki sposób, aby zmaksymalizować wariancję.
+# 
+# Algorytm poniżej dobierze minimalną ilość komponentów, która jest potrzebna
+# do wyjaśnienia 95% wariancji.
 
 # %%
 explained_variance = 0.95
@@ -194,7 +236,9 @@ x = pd.DataFrame(data = principalComponents, columns=[f"PCA{i}" for i in range(c
 # //////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# Classification using KNN
+# #### Klasyfikacja za pomocą KNN
+# 
+# KNN klasyfikuje nowe próbki biorąc pod uwagę k najbliższych sąsiadów.
 
 # %%
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
@@ -205,7 +249,25 @@ plot_confusion_matrix(y_test, y_pred)
 print_summary(y_test, y_pred)
 
 # %%
-data = pd.DataFrame(columns=["train_acc", "test_acc"])
+KNN_keras = KNeighborsClassifier(n_neighbors=5)
+KNN_keras.fit(x_train, y_train)
+
+y_pred_train = KNN_keras.predict(x_train)
+y_pred_test = KNN_keras.predict(x_test)
+
+plot_confusion_matrix(y_train, y_pred_train)
+print_summary(y_train, y_pred_train)
+
+plot_confusion_matrix(y_test, y_pred_test)
+print_summary(y_test, y_pred_test)
+
+# %% [markdown]
+# Na podstawie wykresu widać, że potrzeba co najmniej 3 sąsiadów, aby uzyskać
+# zadowalające wyniki. Zwiększanie liczby sąsiadów zmniejsza dokładność.
+# Jeżeli korzystamy z PCA zwiększanie liczby sąsiadów nie ma większego wpływu.
+
+# %%
+data = pd.DataFrame(columns=["train_acc", "test_acc"], dtype='float')
 
 for i in range(2,20):
   KNN_keras = KNeighborsClassifier(n_neighbors=i)
@@ -221,25 +283,15 @@ for i in range(2,20):
 
 sns.lineplot(data=data)
 
-# %%
-KNN_keras = KNeighborsClassifier(n_neighbors=5)
-KNN_keras.fit(x_train, y_train)
-
-y_pred_train = KNN_keras.predict(x_train)
-y_pred_test = KNN_keras.predict(x_test)
-
-plot_confusion_matrix(y_train, y_pred_train)
-print_summary(y_train, y_pred_train)
-
-plot_confusion_matrix(y_test, y_pred_test)
-print_summary(y_test, y_pred_test)
-
 # //////////////////////////////////////////////////////////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 # //////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# Classification using PNN
+# #### Klasyfikacja za pomocą PNN
+# 
+# Probabilistyczne sieci neuronowe wykorzystują rozkład gęstości i prawdopodobieństwo
+# w celu przypisania próbki do odpowiedniej klasy.
 
 # %%
 pnn = PNN()
@@ -254,7 +306,11 @@ print_summary(y_test, y_pred)
 # //////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# Classification decision tree
+# #### Klasyfikacja za pomocą drzew decyzyjnych
+# 
+# Drzewa decyzyjne opierają swoje działanie na prostych warunkach logicznych.
+# Wartości parametrów każdej próbki są sprawdzane, czy mieszczą się w odpowiednich
+# przedziałach i na tej podstawie wybierana jest klasa.
 
 # %%
 data = pd.DataFrame(columns=["train_acc", "test_acc"])
@@ -293,7 +349,22 @@ print_summary(y_test, y_pred_test)
 # //////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# Feature Importance
+# #### Istotność cech
+# 
+# Nie każda cecha w równym stopniu przykłada się do zwiększenia jakości modelu.
+# Wybranie najistotniejszych cech pozwoli nam zmniejszyć ilość wymiarów przy
+# jednoczesnym zachowaniu wysokiej sprawności modelu.
+# 
+# Problem ten można rozwiązać przy pomocy PCA jednak tracimy informacje
+# o poszczególnych cechach.
+# 
+# Poniżej znajduje się kilka algorytmów, które służą do wybrania najistotniejszych
+# cech. W scikit-learn implementacja drzew decyzyjnych ma zmienną feature_importances_
+# dzięki czemu "za darmo" możemy dostać potrzebne informacje.
+# 
+# Drugi sposób polega na permutacji cechy. Mieszamy w ten sposób dane przez co
+# dana cecha staje się bezużyteczna. Na wcześniej wytrenowanym modelu sprawdzamy
+# jak bardzo miało to wpływ na dokładność.
 
 # %%
 tree = DecisionTreeClassifier(max_depth=10, min_samples_leaf=2, min_samples_split=2)
@@ -323,7 +394,7 @@ plot_importance(x.columns, model.coef_[0])
 
 # %%
 model = LinearRegression()
-model.fit(x_train, y_train.map({'f': 0, 't': 1}))
+model.fit(x_train, y_train.map({'M': 0, 'F': 1}))
 
 plot_importance(x.columns, model.coef_[0])
 
@@ -332,22 +403,11 @@ plot_importance(x.columns, model.coef_[0])
 # //////////////////////////////////////////////////////////////////////////////
 
 # %% [markdown]
-# Fuzzy logic
-
-# %%
-class_name = "F"
-feature = "height_cm"
-
-filter = (y_train == class_name)
-data = x_train.loc[filter, feature]
-f = Fitter(data, distributions=get_common_distributions(), bins=round(sqrt(y_train.size)))
-f.fit()
-
-# %%
-f.df_errors
-
-# %%
-f.fitted_param
+# #### Logika rozmyta
+# 
+# Metoda ta polega na rozmyciu wartości za pomocą funkcji przynależności, które
+# ustala ekspert. Następnie na podstawie wartości rozmytych przeprowadzamy
+# wnioskowanie wykorzystując sNormy i tNormy.
 
 # %%
 short = trapezeR(0.3, 0.6)

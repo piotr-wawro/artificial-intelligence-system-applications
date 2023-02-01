@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 def plot_confusion_matrix(y_true, y_pred):
-  matrix = confusion_matrix(y_true, y_pred, labels=np.unique(y_pred))
+  matrix = confusion_matrix(y_true, y_pred, labels=np.unique(y_true))
 
   group_counts = [f"{value:.0f}" for value in
                   matrix.flatten()]
@@ -16,10 +16,10 @@ def plot_confusion_matrix(y_true, y_pred):
   labels = [f"{v1}\n\n{v2}" for v1, v2 in
             zip(group_counts,group_percentages)]
 
-  labels = np.asarray(labels).reshape(np.unique(y_pred).size, -1)
+  labels = np.asarray(labels).reshape(np.unique(y_true).size, -1)
 
   sns.heatmap(matrix, annot=labels, fmt='', cmap='Blues',
-              xticklabels=np.unique(y_pred), yticklabels=np.unique(y_pred))
+              xticklabels=np.unique(y_true), yticklabels=np.unique(y_true))
   plt.ylabel('True label')
   plt.xlabel('Predicted label')
   plt.show()

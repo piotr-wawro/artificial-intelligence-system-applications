@@ -1,3 +1,5 @@
 {
-    "notebook.output.textLineLimit": 100
+    "notebook.output.textLineLimit": 100,
+    "jupyter.notebookFileRoot": "${workspaceFolder}",
+    "jupyter.interactiveWindowMode": "perFile",
 }
